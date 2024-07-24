@@ -1,5 +1,5 @@
-#include "../wb.h"
-#include "solution.h"
+#include "../../../wb.h"
+#include "../../solution.h"
 #include <cassert>
 
 #define wbCheck(stmt)                                                     \
@@ -16,15 +16,13 @@
 
 //@@ Define constant memory for device kernel here
 
-__global__ void conv3d(float *input, float *output, const int z_size,
+__global__ void conv2d(float *input, float *output,
                        const int y_size, const int x_size) {
   //@@ Insert kernel code here
-  
 }
 
 int main(int argc, char *argv[]) {
   wbArg_t args;
-  int z_size;
   int y_size;
   int x_size;
   int inputLength, kernelLength;
@@ -43,11 +41,10 @@ int main(int argc, char *argv[]) {
   hostOutput = (float *)malloc(inputLength * sizeof(float));
 
   // First three elements are the input dimensions
-  z_size = hostInput[0];
-  y_size = hostInput[1];
-  x_size = hostInput[2];
-  wbLog(TRACE, "The input size is ", z_size, "x", y_size, "x", x_size);
-  assert(z_size * y_size * x_size == inputLength - 3);
+  y_size = hostInput[0];
+  x_size = hostInput[1];
+  wbLog(TRACE, "The input size is %d x %d", y_size, x_size);
+  assert(y_size * x_size == inputLength - 3);
   assert(kernelLength == 27);
 
   wbTime_start(GPU, "Doing GPU Computation (memory + compute)");
