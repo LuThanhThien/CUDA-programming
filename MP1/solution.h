@@ -8,8 +8,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <cuda_runtime.h>
-#include <corecrt_math.h>
-#include <crt/host_config.h>
+#include <crt/host_config.h>    
 
 #define EPSILON 1e-6 
 
