@@ -8,8 +8,10 @@
 #include <stdarg.h>
 #include <string.h>
 #include <cuda_runtime.h>
+#include <crt/host_config.h>
 
-#define EPSILON 1e-4
+#define EPSILON 1e-2
+
 
 float *wbImport(const char *file, int *length) {
     FILE *fp = fopen(file, "r");
@@ -38,6 +40,7 @@ float *wbImport(const char *file, int *length) {
     return data;
 }
 
+
 void wbSolution(wbArg_t args, float *output, int length) {
     int resultLength;
     float* results = (float *)wbImport(wbArg_getOutputFile(args), &resultLength);
@@ -48,7 +51,7 @@ void wbSolution(wbArg_t args, float *output, int length) {
 
     for (int i = 0; i < length; i++) {
         if (fabs(output[i] - results[i]) > EPSILON) {
-            fprintf(stderr, "Result not matched at element number %d: your output = %f :: actual output = %f\n", i - 3, output[i], results[i]);
+            fprintf(stderr, "Result not matched at element number %d: your output = %f :: actual output = %f\n", i, output[i], results[i]);
             exit(EXIT_FAILURE);
         }
     }

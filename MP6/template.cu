@@ -4,7 +4,8 @@
 // +
 // lst[n-1]}
 
-#include <wb.h>
+#include "../wb.h"
+#include "solution.h"
 
 #define BLOCK_SIZE 512 //@@ You can change this
 
@@ -18,11 +19,17 @@
     }                                                                     \
   } while (0)
 
+
 __global__ void scan(float *input, float *output, int len) {
   //@@ Modify the body of this function to complete the functionality of
   //@@ the scan on the device
   //@@ You may need multiple kernel calls; write your kernels before this
   //@@ function and call them from the host
+}
+
+__global__ void add(float* input, float *output, int len) {
+  // Element sum wise
+
 }
 
 int main(int argc, char **argv) {
@@ -40,7 +47,7 @@ int main(int argc, char **argv) {
   hostOutput = (float *)malloc(numElements * sizeof(float));
   wbTime_stop(Generic, "Importing data and creating memory on host");
 
-  wbLog(TRACE, "The number of input elements in the input is ",
+  wbLog(TRACE, "The number of input elements in the input is %d",
         numElements);
 
   wbTime_start(GPU, "Allocating GPU memory.");
@@ -58,10 +65,26 @@ int main(int argc, char **argv) {
   wbTime_stop(GPU, "Copying input memory to the GPU.");
 
   //@@ Initialize the grid and block dimensions here
+  int numThreads = 512;
+  int numBlocks = numElements / (numThreads << 1);
+  dim3 grid(numBlocks);
+  dim3 block(numThreads);
+
+  wbLog(CPU, "numThreads = %d; numBlocks = %d", numThreads, numBlocks);
 
   wbTime_start(Compute, "Performing CUDA computation");
   //@@ Modify this to complete the functionality of the scan
   //@@ on the deivce
+
+  // 1. Launch first kernel to do scan for each block
+  scan<<<grid, block>>>(deviceInput, deviceOutput, numElements);
+
+  // 2. Launch second kernel to do scan for the acummulated sum
+  scan<<<1, grid>>>(deviceInput, deviceOutput, numElements);
+
+  // 3. Launch third kernel to do scan for final result
+  scan<<<grid, block>>>(deviceInput, deviceOutput, numElements);
+  atomicAdd()
 
   cudaDeviceSynchronize();
   wbTime_stop(Compute, "Performing CUDA computation");

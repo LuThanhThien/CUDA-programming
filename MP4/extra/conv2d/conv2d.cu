@@ -11,15 +11,49 @@
       return -1;                                                          \
     }                                                                     \
   } while (0)
-
-//@@ Define any useful program-wide constants here
+#define TILE_WIDTH 8
+#define KERNEL_WIDTH 3
 
 //@@ Define constant memory for device kernel here
+__constant__ float deviceKernel[KERNEL_WIDTH * KERNEL_WIDTH * KERNEL_WIDTH];
+
 
 __global__ void conv2d(float *input, float *output,
                        const int y_size, const int x_size) {
   //@@ Insert kernel code here
+  __shared__ float tile[TILE_WIDTH + KERNEL_WIDTH - 1][TILE_WIDTH + KERNEL_WIDTH - 1];
+  // identify the index and load data
+  int tx = threadIdx.x;
+  int ty = threadIdx.y;
+
+  // output indices
+  int row_o = blockIdx.y * TILE_WIDTH + ty;
+  int col_o = blockIdx.x * TILE_WIDTH + tx;
+
+  // input indices
+  int row_i = row_o - KERNEL_WIDTH / 2;
+  int col_i = col_o - KERNEL_WIDTH / 2;
+
+  // check boundaries
+  if (row_i >= 0 && row_i < y_size && col_i >= 0 && col_i < x_size) 
+    tile[ty][tx] = input[row_i * x_size + col_i];
+  else 
+    tile[ty][tx] = 0.0f;
+
+  __syncthreads();
+
+  // perform computations
+  if (ty < TILE_WIDTH && tx < TILE_WIDTH) {
+    float Pvalue = 0; 
+    for (int i = 0; i < KERNEL_WIDTH; i++) {
+      for (int j = 0; j < KERNEL_WIDTH; j++) {
+        Pvalue += tile[i + ty][j + tx] * deviceKernel[i * KERNEL_WIDTH + j];
+      }
+    }
+    if (tx < x_size && ty < y_size) output[row_o * x_size + col_o] = Pvalue;  
+  }
 }
+
 
 int main(int argc, char *argv[]) {
   wbArg_t args;

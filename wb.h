@@ -8,16 +8,15 @@
 #include <stdarg.h>
 #include <string.h>
 #include <cuda_runtime.h>
-#include <corecrt_math.h>
-#include <crt/host_config.h>
 
-#define EPSILON 1e-6 
+#define ERROR "ERROR"
 #define TRACE "TRACE"
 #define GPU "GPU"
+#define CPU "CPU"
 #define Generic "Generic"
 #define Compute "Compute"
 #define Copy "Copy"
- 
+
 typedef struct {
     char **args;
     int count;
