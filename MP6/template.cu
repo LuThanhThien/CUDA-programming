@@ -84,7 +84,6 @@ int main(int argc, char **argv) {
 
   // 3. Launch third kernel to do scan for final result
   scan<<<grid, block>>>(deviceInput, deviceOutput, numElements);
-  atomicAdd()
 
   cudaDeviceSynchronize();
   wbTime_stop(Compute, "Performing CUDA computation");
