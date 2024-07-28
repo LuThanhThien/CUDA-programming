@@ -45,17 +45,22 @@ __global__ void KoggeStoneScan(float *input, float *output, int len) {
 
 __global__ void scanAdd(float *output, float *scanArray, int len) {
   // Element sum wise
-  __shared__ float previous_sum;
+  __shared__ float previous_sum, current_sum;
 
-  int i = 2 * blockIdx.x * blockDim.x + threadIdx.x;
-  if (threadIdx.x == 0) previous_sum = scanArray[blockIdx.x];
+  if (blockIdx.x > 0) {
+    int i = 2 * blockIdx.x * blockDim.x + threadIdx.x;
+    if (threadIdx.x == 0) {
+      previous_sum = scanArray[blockIdx.x - 1];
+      current_sum = scanArray[blockIdx.x];
+    }
+    __syncthreads();
 
-  if (i < len && blockIdx.x > 0) {
-    output[i] += previous_sum;
-    if (i + blockDim.x < len) {
-      output[i + blockDim.x] += previous_sum;
+    if (i < len) {
+      output[i] += previous_sum;
+      if (i + blockDim.x < len) output[i + blockDim.x] += previous_sum;
     }
   }
+  
 }
 
 
@@ -80,9 +85,9 @@ __global__ void BrentKungScan(float *input, float *output, int len, float *scanA
   }
 
   // Reverse tree
-  for (int stride = SECTION_SIZE / 4; stride > 0; stride /= 2) {
+  for (unsigned int stride = SECTION_SIZE / 4; stride >= 1; stride /= 2) {
     __syncthreads();
-    int index = (threadIdx.x + 2) * 2 * stride - 1;
+    int index = (threadIdx.x + 1) * 2 * stride - 1;
     if (index + stride < SECTION_SIZE) XY[index + stride] += XY[index];
   }
 
@@ -142,17 +147,18 @@ int main(int argc, char **argv) {
   //@@ on the deivce
   
   // // 1. Launch first kernel to do scan for each block
-  KoggeStoneScan<<<ceil(numElements / (SECTION_SIZE * 1.0)), SECTION_SIZE>>>(deviceInput, deviceOutput, numElements); 
-  // BrentKungScan<<<numBlocks, BLOCK_SIZE>>>(deviceInput, deviceOutput, numElements, scanArray, true);
-  // checkCudaError("sectional brent-kung scan");
+  BrentKungScan<<<numBlocks, BLOCK_SIZE>>>(deviceInput, deviceOutput, numElements, scanArray, true);
+  checkCudaError("sectional brent-kung scan");
   
   // // // 2. Launch second kernel to do scan for the acummulated sum - global scan
-  // BrentKungScan<<<1, ceil(numBlocks / 2.0)>>>(scanArray, scanArray, numBlocks, scanArray, false);
-  // checkCudaError("global brent-kung scan");
-  
-  // // // 3. Launch third kernel to do scan for final result
-  // scanAdd<<<numBlocks, BLOCK_SIZE>>>(deviceOutput, scanArray, numElements);
-  // checkCudaError("element wise adding");
+  if (numBlocks > 1) {
+    BrentKungScan<<<1, ceil(numBlocks / 2.0)>>>(scanArray, scanArray, numBlocks, scanArray, false);
+    checkCudaError("global brent-kung scan");
+    
+    // // // 3. Launch third kernel to do scan for final result
+    scanAdd<<<numBlocks, BLOCK_SIZE>>>(deviceOutput, scanArray, numElements);
+    checkCudaError("element wise adding");
+  }
 
   cudaDeviceSynchronize();
   wbTime_stop(Compute, "Performing CUDA computation");
@@ -163,7 +169,12 @@ int main(int argc, char **argv) {
   wbTime_stop(Copy, "Copying output memory to the CPU");
 
   for (int i = 0; i < numBlocks; i++) {
-    printf("%f ", float(hostOutput[i * SECTION_SIZE]));
+    printf("%f ", float(hostOutput[(i + 1) * SECTION_SIZE - 1]));
+  }
+  printf("\n");
+
+  for (int i = 0; i < 8; i++) {
+    printf("%f ", float(hostOutput[i]));
   }
   printf("\n");
 
